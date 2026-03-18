@@ -755,6 +755,7 @@
         return;
       }
 
+<script>
 app.addEventListener("click", async (event) => {
   const detailButton = event.target.closest(".detail-button");
   if (detailButton) {
@@ -765,6 +766,64 @@ app.addEventListener("click", async (event) => {
     }
     return;
   }
+
+  const backButton = event.target.closest("#btnBackFromDetail");
+  if (backButton) {
+    renderList(seminarItems);
+    return;
+  }
+
+  const confirmButton = event.target.closest("#btnConfirmApply");
+  if (confirmButton) {
+    const applicantName = document.getElementById("applicantName")?.value?.trim() || "";
+
+    if (!selectedSeminar) {
+      showNotice("error", "対象セミナーが見つかりません。");
+      return;
+    }
+
+    if (!profile?.userId) {
+      showNotice("error", "LINEユーザー情報を取得できませんでした。");
+      return;
+    }
+
+    if (!applicantName) {
+      showNotice("error", "申込者名を入力してください。");
+      return;
+    }
+
+    if (loading) {
+      return;
+    }
+
+    loading = true;
+    showNotice("info", "申込処理を実行しています...");
+
+    try {
+      const result = await fetchJson("/api/liff/seminar-apply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          lineUserId: profile.userId,
+          applicantName: applicantName,
+          seminarRecordId: selectedSeminar.recordId
+        })
+      });
+
+      showNotice("success", result.message || "申込を受け付けました。");
+      await loadSeminarList();
+    } catch (err) {
+      showNotice("error", err.message || "申込に失敗しました。");
+    } finally {
+      loading = false;
+    }
+
+    return;
+  }
+});
+</script>
 
   const backButton = event.target.closest("#btnBackFromDetail");
   if (backButton) {
