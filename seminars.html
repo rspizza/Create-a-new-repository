@@ -755,44 +755,70 @@
         return;
       }
 
-      const confirmButton = event.target.closest("#btnConfirmApply");
-      if (confirmButton) {
-        const applicantName = document.getElementById("applicantName")?.value?.trim() || "";
+app.addEventListener("click", async (event) => {
+  const detailButton = event.target.closest(".detail-button");
+  if (detailButton) {
+    const recordId = detailButton.dataset.recordId;
+    const item = seminarItems.find(x => String(x.recordId) === String(recordId));
+    if (item) {
+      renderDetail(item);
+    }
+    return;
+  }
 
-        if (!selectedSeminar) {
-          showNotice("error", "対象セミナーが見つかりません。");
-          return;
-        }
+  const backButton = event.target.closest("#btnBackFromDetail");
+  if (backButton) {
+    renderList(seminarItems);
+    return;
+  }
 
-        if (!applicantName) {
-          showNotice("error", "申込者名を入力してください。");
-          return;
-        }
+  const confirmButton = event.target.closest("#btnConfirmApply");
+  if (confirmButton) {
+    const applicantName = document.getElementById("applicantName")?.value?.trim() || "";
 
-        showNotice("info", "申込APIは次のステップで接続します。");
-      }
-    });
+    if (!selectedSeminar) {
+      showNotice("error", "対象セミナーが見つかりません。");
+      return;
+    }
 
-    btnBackToList.addEventListener("click", () => {
-      renderList(seminarItems);
-    });
+    if (!profile?.userId) {
+      showNotice("error", "LINEユーザー情報を取得できませんでした。");
+      return;
+    }
 
-    btnReload.addEventListener("click", async () => {
+    if (!applicantName) {
+      showNotice("error", "申込者名を入力してください。");
+      return;
+    }
+
+    if (loading) {
+      return;
+    }
+
+    loading = true;
+    showNotice("info", "申込処理を実行しています...");
+
+    try {
+      const result = await fetchJson("/api/liff/seminar-apply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          lineUserId: profile.userId,
+          applicantName: applicantName,
+          seminarRecordId: selectedSeminar.recordId
+        })
+      });
+
+      showNotice("success", result.message || "申込を受け付けました。");
       await loadSeminarList();
-    });
+    } catch (err) {
+      showNotice("error", err.message || "申込に失敗しました。");
+    } finally {
+      loading = false;
+    }
 
-    btnClose.addEventListener("click", () => {
-      if (liff.isInClient()) {
-        liff.closeWindow();
-      }
-    });
-
-    setSummary(0, "一覧を表示");
-    initLiff().catch(err => {
-      const message = err.message || "LIFF 初期化に失敗しました。";
-      renderError(message);
-      showNotice("error", message);
-    });
-  </script>
-</body>
-</html>
+    return;
+  }
+});
